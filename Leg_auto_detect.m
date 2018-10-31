@@ -5,8 +5,8 @@ clc
 path = '\\134.130.86.237\projekt\vulnusMON\201802_Bochum\aufnahmen';
 addpath(path);
 
-irt_img = 'IRT_29_l';
-rgb_img = 'RGB_29_l';
+irt_img = 'IRT_30_l';
+rgb_img = 'RGB_30_l';
 
 % get 2D matrix (irt_img) containing temperature values for each pixel in °C
 irt_img = dir(strcat(path,'\',irt_img,'*.asc'));
@@ -136,8 +136,9 @@ f = tform_mean.T(3,2);
 
 % find the gradient of the leg
 upperline_irt = irt_img(y_line_upper_irt,:);
-min_leg_gradient = 0.16;
-g = upperline_irt>min_leg_gradient
+min_leg_gradient = 0.6;
+g = irt_img.*(irt_img>min_leg_gradient);
+figure,imshow(g);
 leg_area = find(upperline_irt(g));
 
 
