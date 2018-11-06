@@ -5,8 +5,8 @@ clc
 path = '\\134.130.86.237\projekt\vulnusMON\201802_Bochum\aufnahmen';
 addpath(path);
 
-irt_img = 'IRT_30_l';
-rgb_img = 'RGB_30_l';
+irt_img = 'IRT_32_r';
+rgb_img = 'RGB_32_r';
 
 % get 2D matrix (irt_img) containing temperature values for each pixel in °C
 irt_img = dir(strcat(path,'\',irt_img,'*.asc'));
@@ -112,7 +112,8 @@ edgepoint_bottom_irt = find(edgeim_irt(y_line_bottom_irt,:)==1);
 % Determine does the image required additional adjustment
 first_edge_diff = abs(edgepoint_upper_rgb(1,1) - edgepoint_upper_irt(1,2));
 second_edge_diff = abs(edgepoint_upper_rgb(1,2) - edgepoint_upper_irt(1,3));
-additional_adjust = first_edge_diff>10 & second_edge_diff>10; %if the diffence more than 10 pixels
+pixel_diff = 10;
+additional_adjust = first_edge_diff>pixel_diff & second_edge_diff>pixel_diff; %if the diffence more than 10 pixels
 
 if additional_adjust == true
 %% Simplify the transformation function
@@ -138,9 +139,48 @@ f = tform_mean.T(3,2);
 upperline_irt = irt_img(y_line_upper_irt,:);
 min_leg_gradient = 0.6;
 g = irt_img.*(irt_img>min_leg_gradient);
-figure,imshow(g);
-leg_area = find(upperline_irt(g));
+figure(7),imshow(g);
+leg_area = find(upperline_irt.*(upperline_irt>min_leg_gradient));
+area_diff = diff(leg_area);
+leg = cell(4,3);
+leg = {'Line' 'first_leg_range' 'second_leg_range';'Upper' 0 0;'Mid' 0 0;'Bottom' 0 0};
+leg{2,2}(1) = leg_area(1);
+if leg_area(area_diff>2)>1 % Determine if there are second leg
+    leg{2,2}(2) = leg_area(area_diff>2);
+    leg{2,3}(1) = leg_area.*(area_diff>2);
+    leg{2,3}(2) = leg_area(numel(leg_area));
+else
+    leg{2,2}(2) = leg_area(numel(leg_area));
+end
 
+midline_irt = irt_img(y_line_mid_irt,:);
+leg_area = find(midline_irt.*(midline_irt>min_leg_gradient));
+area_diff = [diff(leg_area),0];
+leg{3,2}(1) = leg_area(1);
+temp = leg_area(area_diff>2);
+if temp>1
+    leg{3,2}(2) = temp(1);
+    leg{3,3}(1) = temp(2);
+    leg{3,3}(2) = leg_area(numel(leg_area));
+else
+    leg{3,2}(2) = leg_area(numel(leg_area));
+end
+
+bottomline_irt = irt_img(y_line_bottom_irt,:);
+leg_area = find(bottomline_irt.*(bottomline_irt>min_leg_gradient));
+area_diff = diff(leg_area);
+leg{4,2}(1) = leg_area(1);
+if leg_area(area_diff>2)>1
+    leg{4,2}(2) = leg_area(area_diff>2);
+    leg{4,3}(1) = leg_area.*(area_diff>2);
+    leg{4,3}(2) = leg_area(numel(leg_area));
+else
+    leg{4,2}(2) = leg_area(numel(leg_area));
+end
+
+
+
+max_intensity = 0.7;
 
 leg_diameter_rgb = edgepoint_upper_rgb(1,2) - edgepoint_upper_rgb(1,1);
 leg_diameter_irt = edgepoint_upper_irt(1,2) - edgepoint_upper_irt(1,1);
