@@ -5,8 +5,8 @@ clc
 path = '\\134.130.86.237\projekt\vulnusMON\201802_Bochum\aufnahmen';
 addpath(path);
 
-irt_img = 'IRT_30_l';
-rgb_img = 'RGB_30_l';
+irt_img = 'IRT_30_r';
+rgb_img = 'RGB_30_r';
 
 % get 2D matrix (irt_img) containing temperature values for each pixel in °C
 irt_img = dir(strcat(path,'\',irt_img,'*.asc'));
@@ -37,7 +37,8 @@ irt_img = (irt_img - min(irt_img(:)))/(max(irt_img(:)) - min(irt_img(:)));
 % get 3D matrix (rgb_img) containing R, G and B color values for each pixel
 rgb_img = imread(strcat(path,'\',rgb_img,'.jpg'));
 rgb_img = imresize(rgb_img,min(irt_width,irt_height)/min(size(rgb_img(:,:,1))));
-
+min_leg_gradient = 0.5;
+irt_img = irt_img.*(irt_img>min_leg_gradient); %remove unwanted background value
 
 [bw,rgb_threshold] = legThreshold3(rgb_img);
 
@@ -110,10 +111,11 @@ edgepoint_mid_irt = find(edgeim_irt(y_line_mid_irt,:)==1);
 edgepoint_bottom_irt = find(edgeim_irt(y_line_bottom_irt,:)==1);
 
 % Determine does the image required additional adjustment
-first_edge_diff = abs(edgepoint_upper_rgb(1,1) - edgepoint_upper_irt(1,2));
-second_edge_diff = abs(edgepoint_upper_rgb(1,2) - edgepoint_upper_irt(1,3));
+first_edge_diff = abs(edgepoint_upper_rgb(1,1) - edgepoint_upper_irt(1,1));
+second_edge_diff = abs(edgepoint_upper_rgb(1,2) - edgepoint_upper_irt(1,2));
+%if the differences more than 10 pixels
 pixel_diff = 10;
-additional_adjust = first_edge_diff>pixel_diff & second_edge_diff>pixel_diff; %if the diffence more than 10 pixels
+additional_adjust = first_edge_diff>pixel_diff & second_edge_diff>pixel_diff; 
 
 if additional_adjust == true
 %% Simplify the transformation function
@@ -194,7 +196,7 @@ end
 x_midpoint_irt = irt_width/2;
 score1 = 0; %first leg score
 score2 = 0; %second leg score
-if leg{2,3}~=0
+if leg{2,3}~=0 %to ensure there are second leg
     dist_from_mid1 = abs(x_midpoint_irt - (leg{2,2}(2)+leg{2,2}(1))/2);
     dist_from_mid2 = abs(x_midpoint_irt - (leg{2,3}(2)+leg{2,3}(1))/2);
     if dist_from_mid1<dist_from_mid2
@@ -230,11 +232,20 @@ end
 
 % Find if the leg have reasonable diameter
 if score1>score2
-    irt_diameter_u = leg{2,2}(2)-leg{2,2}(1);
-    irt_diameter_m = leg{3,2}(2)-leg{3,2}(1);
-    irt_diameter_b = leg{4,2}(2)-leg{4,2}(1);
-end
+    %find the shortest diameter/smallest x-axis point
+    compare_point = 1*(leg{2,2}(2)<leg{3,2}(2)&leg{2,2}(2)<leg{4,2}(2))+...
+                  2*(leg{3,2}(2)<leg{2,2}(2)&leg{3,2}(2)<leg{4,2}(2))+...
+                  3*(leg{4,2}(2)<leg{2,2}(2)&leg{4,2}(2)<leg{3,2}(2));
+    x_small_point = (compare_point==1)*leg{2,2}(2)+(compare_point==2)*leg{3,2}(2)+(compare_point==3)*leg{4,2}(2);
     
+    %find the pixel value in horizontal and adjacent value
+    y_small_point = (compare_point==1)*y_line_upper_irt+(compare_point==2)*y_line_mid_irt+(compare_point==3)*y_line_bottom_irt;
+    y_small_point = y_small_point-1;
+    right_small_pt = [irt_img(y_small_point,x_small_point+1),irt_img(y_small_point,x_small_point+2),irt_img(y_small_point,x_small_point+3)]
+    left_small_pt = [irt_img(y_small_point,x_small_point-1),irt_img(y_small_point,x_small_point-2),irt_img(y_small_point,x_small_point-3)]
+end
+
+
 
 max_intensity = 0.7;
 
