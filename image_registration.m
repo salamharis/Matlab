@@ -11,7 +11,7 @@ irt_img_basename = 'IRT_0';
 rgb_img_basename = 'RGB_0';
 leg = 'l';
 
-for p=33:38
+for p=26:33
     if p>9
       irt_img_basename = 'IRT_';
       rgb_img_basename = 'RGB_'; 
@@ -102,7 +102,8 @@ tform_mean = affine2d(tform_mean);
 irt_registered = imwarp(irt_img,tform_mean,'OutputView',imref2d(size(rgb_img)));
 img_title = ['Image ',num2str(p),' position ',leg];
 figure
-imshowpair(rgb_img,irt_registered,'blend')
+imtool(irt_img);
+% imshowpair(rgb_img,irt_registered,'blend')
 title(img_title);
     end
 end
