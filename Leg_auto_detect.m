@@ -234,15 +234,61 @@ end
 if score1>score2
     %find the shortest diameter/smallest x-axis point
     compare_point = 1*(leg{2,2}(2)<leg{3,2}(2)&leg{2,2}(2)<leg{4,2}(2))+...
-                  2*(leg{3,2}(2)<leg{2,2}(2)&leg{3,2}(2)<leg{4,2}(2))+...
-                  3*(leg{4,2}(2)<leg{2,2}(2)&leg{4,2}(2)<leg{3,2}(2));
+        2*(leg{3,2}(2)<leg{2,2}(2)&leg{3,2}(2)<leg{4,2}(2))+...
+        3*(leg{4,2}(2)<leg{2,2}(2)&leg{4,2}(2)<leg{3,2}(2));
     x_small_point = (compare_point==1)*leg{2,2}(2)+(compare_point==2)*leg{3,2}(2)+(compare_point==3)*leg{4,2}(2);
-    
-    %find the pixel value in horizontal and adjacent value
     y_small_point = (compare_point==1)*y_line_upper_irt+(compare_point==2)*y_line_mid_irt+(compare_point==3)*y_line_bottom_irt;
-    y_small_point = y_small_point-1;
-    right_small_pt = [irt_img(y_small_point,x_small_point+1),irt_img(y_small_point,x_small_point+2),irt_img(y_small_point,x_small_point+3)]
-    left_small_pt = [irt_img(y_small_point,x_small_point-1),irt_img(y_small_point,x_small_point-2),irt_img(y_small_point,x_small_point-3)]
+    
+    
+    
+    right_small_pt = ones(300,20);
+    left_small_pt = ones(300,20);
+    im_newline = ones(irt_height, irt_width);
+    for f=1:300
+        
+%         if f==1
+%         y_small_point = y_small_point-5;
+%         end
+        
+        % find the point that in between two gradient
+        best_edge = false;
+         while(~best_edge)
+            
+            %find the pixel value in horizontal and adjacent value
+%             right_small_pt(f,:) = [irt_img(y_small_point,x_small_point+1),irt_img(y_small_point,x_small_point+2),irt_img(y_small_point,x_small_point+3)];
+%             left_small_pt(f,:) = [irt_img(y_small_point,x_small_point-1),irt_img(y_small_point,x_small_point-2),irt_img(y_small_point,x_small_point-3)];
+%             
+            right_small_pt(f,:) = irt_img(y_small_point,x_small_point:x_small_point+19);
+            left_small_pt(f,:) = irt_img(y_small_point,x_small_point-19:x_small_point);
+%             right_small_pt(f,:) = [diff(right_small_pt(f,:)),0];
+%             left_small_pt(f,:) = [diff(left_small_pt(f,:)),0];
+            mean_right = mean(right_small_pt(f,:));
+            mean_left = mean(left_small_pt(f,:));
+            if right_small_pt(f,1)==0
+                %do nothing, the point is at edge
+                y_small_point = y_small_point-5; %shift the point upward about 5
+                best_edge = true;
+            elseif (mean_right-mean_left)<0.02&&(mean_right-mean_left)>0.02
+                %do nothing, the point is at edge
+                best_edge = true;
+            elseif mean_right==mean_left
+                %do nothing, the point is at edge
+                best_edge = true;
+            elseif (mean_right-mean_left)<0.02
+                x_small_point=x_small_point+1;
+            elseif (mean_right-mean_left)>0.02
+                x_small_point=x_small_point-1;
+            end
+        end
+        
+            y_small_point = y_small_point-5;
+        
+        %draw the new edge
+        im_newline(y_small_point,x_small_point)=0;
+    end
+    figure, imshow(im_newline);
+    figure, imshowpair(irt_img,im_newline,'blend');
+
 end
 
 
@@ -301,8 +347,8 @@ e = tform_mean.T(3,1);
 f = tform_mean.T(3,2);
 
 edgeim_irt = edge(irt_registered,'canny', [0.1 0.2], 10);
-edgepoint_upper_irt = find(edgeim_irt(y_line_upper_irt,:)==1);
-edge_diff = edgepoint_upper_rgb(1,1) - edgepoint_upper_irt(1,1);
+edgepoint_mid_irt = find(edgeim_irt(y_line_upper_irt,:)==1);
+edge_diff = edgepoint_mid_rgb(1,1) - edgepoint_mid_irt(1,1);
 e = e + edge_diff;
 tform_mean = [a b 0;c d 0;e f 1];
 tform_mean = affine2d(tform_mean);
