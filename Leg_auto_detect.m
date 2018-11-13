@@ -240,55 +240,75 @@ if score1>score2
     y_small_point = (compare_point==1)*y_line_upper_irt+(compare_point==2)*y_line_mid_irt+(compare_point==3)*y_line_bottom_irt;
     
     
-    
-    right_small_pt = ones(300,20);
-    left_small_pt = ones(300,20);
+    size_scan = 5;
+    right_small_pt = ones(300,size_scan);
+    left_small_pt = ones(300,size_scan);
     im_newline = ones(irt_height, irt_width);
-    for f=1:300
+    for f=1:200
         
-%         if f==1
-%         y_small_point = y_small_point-5;
-%         end
+        %         if f==1
+        %         y_small_point = y_small_point-5;
+        %         end
         
         % find the point that in between two gradient
         best_edge = false;
-         while(~best_edge)
+        while ~best_edge
             
             %find the pixel value in horizontal and adjacent value
-%             right_small_pt(f,:) = [irt_img(y_small_point,x_small_point+1),irt_img(y_small_point,x_small_point+2),irt_img(y_small_point,x_small_point+3)];
-%             left_small_pt(f,:) = [irt_img(y_small_point,x_small_point-1),irt_img(y_small_point,x_small_point-2),irt_img(y_small_point,x_small_point-3)];
-%             
-            right_small_pt(f,:) = irt_img(y_small_point,x_small_point:x_small_point+19);
-            left_small_pt(f,:) = irt_img(y_small_point,x_small_point-19:x_small_point);
-%             right_small_pt(f,:) = [diff(right_small_pt(f,:)),0];
-%             left_small_pt(f,:) = [diff(left_small_pt(f,:)),0];
-            mean_right = mean(right_small_pt(f,:));
-            mean_left = mean(left_small_pt(f,:));
-            if right_small_pt(f,1)==0
-                %do nothing, the point is at edge
-                y_small_point = y_small_point-5; %shift the point upward about 5
-                best_edge = true;
-            elseif (mean_right-mean_left)<0.02&&(mean_right-mean_left)>0.02
-                %do nothing, the point is at edge
-                best_edge = true;
-            elseif mean_right==mean_left
-                %do nothing, the point is at edge
-                best_edge = true;
-            elseif (mean_right-mean_left)<0.02
-                x_small_point=x_small_point+1;
-            elseif (mean_right-mean_left)>0.02
-                x_small_point=x_small_point-1;
+            %             right_small_pt(f,:) = [irt_img(y_small_point,x_small_point+1),irt_img(y_small_point,x_small_point+2),irt_img(y_small_point,x_small_point+3)];
+            %             left_small_pt(f,:) = [irt_img(y_small_point,x_small_point-1),irt_img(y_small_point,x_small_point-2),irt_img(y_small_point,x_small_point-3)];
+            %
+            right_small_pt(f,:) = irt_img(y_small_point,x_small_point+1:x_small_point+size_scan);
+            left_small_pt(f,:) = irt_img(y_small_point,x_small_point-size_scan:x_small_point-1);
+            right_small_diff = [diff(right_small_pt(f,:)),0];
+            left_small_diff = [diff(left_small_pt(f,:)),0];
+            mean_right = abs(mean(right_small_diff));
+            mean_left = abs(mean(left_small_diff));
+            mean_thres = 0.02;
+            
+            if any(~right_small_pt(f,:))||any(~left_small_pt(f,:)) %if there are zero value
+                if any(~left_small_pt(f,:))&&~all(~left_small_pt(f,:))
+                    zero_pt = find(~(left_small_pt(f,:)));
+                    x_small_point=x_small_point+(size_scan+1-zero_pt(1,1)); %shift to right
+                else
+                    %                     zero_pt = find(~(right_small_pt(f,:)));
+                    %                     x_small_point=x_small_point-zero_pt(1,1);
+                    %do nothing, the point is at edge
+                    best_edge = true;
+                end
+                %             elseif any(~left_small_pt(f,:))
+                %                 if any(~right_small_pt(f,:))
+                %                     zero_pt = find(~(right_small_pt(f,:)));
+                %                     x_small_point=x_small_point+zero_pt(1,1); %shift to right
+                %                 else
+                %                     %do nothing, the point is at edge
+                %                     best_edge = true;
+                %                 end
+            elseif any(~right_small_pt(f,:))&&any(left_small_pt(f,:))
+                
+                if mean_right>mean_thres&&mean_left>mean_thres
+                    %do nothing, the point is at edge
+                    best_edge = true;
+                elseif mean_right>mean_thres&&mean_left<mean_thres
+                    %shift right
+                    x_small_point=x_small_point+1;
+                elseif mean_right<mean_thres&&mean_left>mean_thres
+                    %shift left
+                    x_small_point=x_small_point-1;
+                elseif mean_right<mean_thres&&mean_left<mean_thres
+                    best_edge = true;
+                end
             end
         end
-        
-            y_small_point = y_small_point-5;
+        %shift the point upward about 5
+        y_small_point = y_small_point-1;
         
         %draw the new edge
         im_newline(y_small_point,x_small_point)=0;
     end
     figure, imshow(im_newline);
     figure, imshowpair(irt_img,im_newline,'blend');
-
+    
 end
 
 
