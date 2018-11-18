@@ -2,13 +2,14 @@ close all
 clear all
 clc
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-path = '\\134.130.86.237\projekt\vulnusMON\201802_Bochum\aufnahmen';
+%path = '\\134.130.86.237\projekt\vulnusMON\201802_Bochum\aufnahmen';
+path = 'C:\Users\MeoW\Desktop\Image Registration\Picture-20181016T194623Z-001\Picture';
 addpath(path);
-img_num = '01';
-leg_position = 'r';
+img_num = '26';
+leg_position = 'l';
 
 irt_img_name = ['IRT_',img_num,'_',leg_position];
-rgb_img_name = 'RGB_01_r';
+rgb_img_name = ['RGB_',img_num,'_',leg_position];
 
 % get 2D matrix (irt_img) containing temperature values for each pixel in °C
 irt_img = dir(strcat(path,'\',irt_img_name,'*.asc'));
@@ -156,7 +157,7 @@ f = tform_mean.T(3,2);
 
 min_leg_gradient = 0.5;
 g = irt_img.*(irt_img>min_leg_gradient);
-figure(7),imshow(g);
+figure(5),imshow(g);
 leg = cell(4,3);
 leg = {'Line' 'first_leg_range' 'second_leg_range';'Upper' 0 0;'Mid' 0 0;'Bottom' 0 0};
 
@@ -181,7 +182,7 @@ score_leg2=score_leg2+score2;
 
 
 % Find if the leg have reasonable diameter
-if score1>score2
+if score_leg1>score_leg2
     %find the shortest diameter/smallest x-axis point
     compare_point = 1*(leg{2,2}(2)<leg{3,2}(2)&leg{2,2}(2)<leg{4,2}(2))+...
         2*(leg{3,2}(2)<leg{2,2}(2)&leg{3,2}(2)<leg{4,2}(2))+...
@@ -190,7 +191,7 @@ if score1>score2
     y_small_point = (compare_point==1)*y_line_upper_irt+(compare_point==2)*y_line_mid_irt+(compare_point==3)*y_line_bottom_irt;
     
     
-    size_scan = 5; %size of adjacent array
+    size_scan = 6; %size of adjacent pt left and right
     upward_dist = y_small_point-1;
     right_small_pt = ones(upward_dist,size_scan);
     left_small_pt = ones(upward_dist,size_scan);
@@ -208,20 +209,20 @@ if score1>score2
             left_small_diff = [diff(left_small_pt(f,:)),0];
             mean_right = abs(mean(right_small_diff));
             mean_left = abs(mean(left_small_diff));
-            mean_thres = 0.02;
+            mean_thres = 0.01;
             
             if mean_left>0&&mean_right>0 %when there are heat gradient at both side
                 
-                if mean_right>mean_thres&&mean_left>mean_thres
+                if mean_right>mean_thres&&mean_left>mean_thres  %the pt is between two leg
                     %do nothing, the point is at edge
                     best_edge = true;
-                elseif mean_right>mean_thres&&mean_left<mean_thres
+                elseif mean_right>mean_thres&&mean_left<mean_thres  %the pt at the leg area
                     %shift right
                     x_small_point=x_small_point+1;
-                elseif mean_right<mean_thres&&mean_left>mean_thres
+                elseif mean_right<mean_thres&&mean_left>mean_thres  %the pt at the outer leg area
                     %shift left
                     x_small_point=x_small_point-1;
-                elseif mean_right<mean_thres&&mean_left<mean_thres
+                elseif mean_right<mean_thres&&mean_left<mean_thres  %the pt is far away from the leg
                     best_edge = true;
                 end
             else
@@ -241,14 +242,14 @@ if score1>score2
             end
         end   
         
-        %shift the point upward about 5
+        %shift the point upward about 1
         y_small_point = y_small_point-1;
         
         %draw the new edge
         im_newline(y_small_point,x_small_point)=0;
     end
-    figure, imshow(im_newline);
-    figure, imshowpair(irt_img,im_newline,'blend');
+    figure(6), imshow(im_newline);
+    figure(7), imshowpair(irt_img,im_newline,'blend');
     
 end
 irt_img_new = irt_img.*im_newline;
@@ -265,6 +266,14 @@ leg_diameter_irt = leg{2,2}(2) - leg{2,2}(1);
 diff_diameter = leg_diameter_rgb - leg_diameter_irt;
 rgb_wider = diff_diameter>20;
 irt_wider = diff_diameter<20;
+
+a = tform_mean.T(1,1);  %read the previous transform matrix
+b = tform_mean.T(1,2);
+c = tform_mean.T(2,1);
+d = tform_mean.T(2,2);
+e = tform_mean.T(3,1);
+f = tform_mean.T(3,2);
+
 a = rgb_wider*a*(leg_diameter_irt/leg_diameter_rgb)+... % scale the x axis irt wider
     irt_wider*a*(leg_diameter_rgb/leg_diameter_irt);    % scale the x axis irt narrow
 
@@ -272,7 +281,7 @@ a = rgb_wider*a*(leg_diameter_irt/leg_diameter_rgb)+... % scale the x axis irt w
 tform_mean = [a b 0;c d 0;e f 1];
 tform_mean = affine2d(tform_mean);
 irt_registered = imwarp(irt_img,tform_mean,'OutputView',imref2d(size(rgb_img)));
-figure(5), imshowpair(rgb_img,irt_registered,'blend')
+figure(8), imshowpair(rgb_img,irt_registered,'blend')
 title('After Scale the IRT Image')
 
 % %% Rotation transformation function
@@ -318,10 +327,9 @@ e = e + edge_diff;
 tform_mean = [a b 0;c d 0;e f 1];
 tform_mean = affine2d(tform_mean);
 irt_registered = imwarp(irt_img,tform_mean,'OutputView',imref2d(size(rgb_img)));
-figure(6), imshowpair(rgb_img,irt_registered,'blend')
+figure(9), imshowpair(rgb_img,irt_registered,'blend')
 title('After Shift the IRT Image')
 
 end
-
 
 
